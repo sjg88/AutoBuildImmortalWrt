@@ -1,41 +1,72 @@
 #!/bin/sh
 
-# 设置默认防火墙规则，方便虚拟机首次访问 WebUI
-uci set firewall.@zone[1].input='ACCEPT'
+# 设置变量
+root_password="sunjian393626"
+lan_ip_address="192.168.3.111"
+pppoe_username="tx7593762"
+pppoe_password="08057032"
+hostname="SJG_OP"
 
-# 设置主机名映射，解决安卓原生 TV 无法联网的问题
-uci add dhcp domain
-uci set "dhcp.@domain[-1].name=time.android.com"
-uci set "dhcp.@domain[-1].ip=203.107.6.88"
+# 记录潜在错误
+exec >/tmp/setup.log 2>&1
 
-
-# 根据网卡数量配置网络
-count=0
-for iface in /sys/class/net/*; do
-  iface_name=$(basename "$iface")
-  # 检查是否为物理网卡（排除回环设备和无线设备）
-  if [ -e "$iface/device" ] && echo "$iface_name" | grep -Eq '^eth|^en'; then
-    count=$((count + 1))
-  fi
-done
-
-# 网络设置
-if [ "$count" -eq 1 ]; then
-  uci set network.lan.proto='dhcp'
-elif [ "$count" -gt 1 ]; then
-  uci set network.lan.ipaddr='192.168.100.1'
+# 设置管理员密码
+if [ -n "$root_password" ]; then
+  (echo "$root_password"; sleep 1; echo "$root_password") | passwd > /dev/null
 fi
 
-# 设置所有网口可访问网页终端
-uci delete ttyd.@ttyd[0].interface
+# 配置LAN
+if [ -n "$lan_ip_address" ]; then
+  uci set network.lan.ipaddr="$lan_ip_address"
+  uci set network.lan.netmask="255.255.255.0"
+  uci commit network
+fi
 
-# 设置所有网口可连接 SSH
-uci set dropbear.@dropbear[0].Interface=''
-uci commit
+# 配置WLAN
+if [ -n "$wlan_name0" -a -n "$wlan_password" -a ${#wlan_password} -ge 8 ]; then
+  uci set wireless.radio0.disabled='0'
+  uci set wireless.radio0.htmode='HT40'
+  uci set wireless.radio0.channel='auto'
+  uci set wireless.radio0.cell_density='0'
+  uci set wireless.default_radio0.ssid="$wlan_name0"
+  uci set wireless.default_radio0.encryption='sae-mixed'
+  uci set wireless.default_radio0.key="$wlan_password"
+fi
 
-# 设置编译作者信息
-FILE_PATH="/etc/openwrt_release"
-NEW_DESCRIPTION="Compiled by wukongdaily"
-sed -i "s/DISTRIB_DESCRIPTION='[^']*'/DISTRIB_DESCRIPTION='$NEW_DESCRIPTION'/" "$FILE_PATH"
+if [ -n "$wlan_name1" -a -n "$wlan_password" -a ${#wlan_password} -ge 8 ]; then
+  uci set wireless.radio1.disabled='0'
+  uci set wireless.radio1.htmode='VHT80'
+  uci set wireless.radio1.channel='auto'
+  uci set wireless.radio1.cell_density='0'
+  uci set wireless.default_radio1.ssid="$wlan_name1"
+  uci set wireless.default_radio1.encryption='sae-mixed'
+  uci set wireless.default_radio1.key="$wlan_password"
+fi
+
+uci commit wireless
+
+# 配置PPPoE
+if [ -n "$pppoe_username" -a -n "$pppoe_password" ]; then
+  uci set network.wan.proto='pppoe'
+  uci set network.wan.username="$pppoe_username"
+  uci set network.wan.password="$pppoe_password"
+  uci commit network
+fi
+
+# 设置主机名
+if [ -n "$hostname" ]; then
+  uci set system.@system[0].hostname="$hostname"
+  uci commit system
+fi
+
+# 设置时区
+uci set system.@system[0].zonename='Asia/Shanghai'
+uci set system.@system[0].timezone='CST-8'
+
+
+# 重启网络服务
+/etc/init.d/network restart
+
+
 
 exit 0
