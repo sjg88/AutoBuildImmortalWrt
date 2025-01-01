@@ -22,6 +22,12 @@ PACKAGES="$PACKAGES luci-app-openclash"
 PACKAGES="$PACKAGES luci-i18n-homeproxy-zh-cn"
 PACKAGES="$PACKAGES openssh-sftp-server"
 PACKAGES="$PACKAGES luci-i18n-dockerman-zh-cn"
+PACKAGES="$PACKAGES luci-app-unblockneteasemusic"
+PACKAGES="$PACKAGES luci-app-lucky"
+PACKAGES="$PACKAGES adguardhome"
+PACKAGES="$PACKAGES luci-app-arpbind"
+PACKAGES="$PACKAGES luci-app-vlmcsd"
+PACKAGES="$PACKAGES luci-proto-wireguard"
 
 # 构建镜像
 echo "$(date '+%Y-%m-%d %H:%M:%S') - Building image with the following packages:"
